@@ -1,0 +1,285 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-ajax/iron-ajax.html">
+<link rel="import" href="../bower_components/vaadin-grid/vaadin-grid.html">
+
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/iron-icons/editor-icons.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+
+<link rel="import" href="../bower_components/wt-srch-bar/wt-srch-bar.html">
+<link rel="import" href="../bower_components/wt-bootstrap-styles/wt-bootstrap-styles.html">
+
+<link rel="import" href="shared-styles.html">
+
+
+<bind-expanded-items></bind-expanded-items>
+<dom-module id="my-view1">
+  <template>
+    <style  include="bootstrap-styles">
+      :host {
+        display: block;
+      }
+
+      .icon-img-start {
+        position: absolute; 
+        top: 10px; 
+        left: 10px; 
+        width: 70px; 
+        height: 70px; 
+        color: black;
+      }
+
+      .icon-img-edit {
+        position: absolute; 
+        top: 10px; 
+        right: 10px; 
+        width: 50px; 
+        height: 50px; 
+        color: black;
+      }
+
+      .details {
+        padding: 10px;
+        margin: 10px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14);
+        font-size: 20px;
+      }
+
+      .clearfix:after {
+         content: " "; /* Older browser do not support empty content */
+         visibility: hidden;
+         display: block;
+         height: 0;
+         clear: both;
+      }
+
+      img {
+        width: 80px;
+        height: 80px;
+      }
+
+      paper-dialog#error-dialog {
+        border: 2px solid;
+        border-color: red;
+        background-color: white;
+        color: black;
+      }
+
+      paper-dialog#error-dialog {
+        width: 300px;
+        overflow: auto;
+      }
+
+      vaadin-grid#grid {
+
+        font-family: Roboto, sans-serif;
+        --divider-color: rgba(0, 0, 0, var(--dark-divider-opacity));
+
+        --vaadin-grid-cell: {
+          padding: 0;
+        };
+
+        --vaadin-grid-header-cell: {
+          height: 64px;
+          color: rgba(0, 0, 0, var(--dark-secondary-opacity));
+          font-size: 12px;
+        };
+
+        --vaadin-grid-body-cell: {
+          height: 48px;
+          color: rgba(0, 0, 0, var(--dark-primary-opacity));
+          font-size: 13px;
+        };
+
+        --vaadin-grid-body-row-hover-cell: {
+          background-color: var(--paper-grey-200);
+        };
+
+        --vaadin-grid-body-row-selected-cell: {
+          background-color: var(--paper-grey-100);
+        };
+
+        --vaadin-grid-focused-cell: {
+          box-shadow: none;
+          font-weight: bold;
+        };
+      }
+
+      vaadin-grid#grid .cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-right: 56px;
+      }
+
+      vaadin-grid#grid .cell.last {
+        padding-right: 24px;
+      }
+
+      vaadin-grid#grid .cell.numeric {
+        text-align: right;
+      }
+
+      vaadin-grid#grid paper-checkbox {
+        --primary-color: var(--paper-indigo-500);
+        margin: 0 24px;
+      }
+
+      vaadin-grid#grid vaadin-grid-sorter {
+        --vaadin-grid-sorter-arrow: {
+          display: none !important;
+        };
+      }
+
+      vaadin-grid#grid vaadin-grid-sorter .cell {
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      vaadin-grid#grid vaadin-grid-sorter iron-icon {
+        transform: scale(0.8);
+      }
+
+      vaadin-grid#grid vaadin-grid-sorter:not([direction]) iron-icon {
+        color: rgba(0, 0, 0, var(--dark-disabled-opacity));
+      }
+
+      vaadin-grid#grid vaadin-grid-sorter[direction] {
+        color: rgba(0, 0, 0, var(--dark-primary-opacity));
+      }
+
+      vaadin-grid#grid vaadin-grid-sorter[direction=desc] iron-icon {
+        transform: scale(0.8) rotate(180deg);
+      }
+
+
+    </style>
+
+    <iron-ajax auto 
+      handle-as="json" 
+      url="/src/data/getDecisionTrees.php"
+      on-response="_handleResponse"></iron-ajax>
+
+    <div class="card">
+      <wt-srch-bar
+        id="srch-bar"
+        filter-types-url="/src/data/wtSrchBar.php">
+      </wt-srch-bar>
+      <vaadin-grid on-active-item-changed="_onActiveItemChanged" id="grid" items="[[data]]" size="300" style="height: auto;">
+
+        <template class="row-details">
+          <div class="details">
+            <a href="/src/#/start">
+              <img src="/src/expert.png" class=""></img>
+            </a>
+            <p>[[item.name]]!</p>
+            <a href="/src/#/view2">
+              <paper-icon-button icon="editor:mode-edit" class="icon-img-edit"></paper-icon-button>
+            </a>
+          </div>
+        </template>
+
+<!--         <vaadin-grid-column width="50px" flex-grow="0">
+          <template class="header">#</template>
+          <template>[[index]]</template>
+        </vaadin-grid-column> -->
+
+        <vaadin-grid-column>
+          <template class="header">Name</template>
+          <template>[[item.name]]</template>
+        </vaadin-grid-column>
+
+        <vaadin-grid-column>
+          <template class="header">Description</template>
+          <template>[[item.description]]</template>
+        </vaadin-grid-column>
+
+      </vaadin-grid>
+    </div>
+
+    <paper-dialog id="error-dialog" with-backdrop>
+      <h2>Error</h2>
+      <p id="error-msg"></p>
+    </paper-dialog>
+
+  </template>
+
+
+  <script>
+
+    class MyView1 extends Polymer.Element {
+      static get is() { return 'my-view1'; }
+
+      constructor() {
+        super();
+        console.log("constructor...");
+      }
+
+      _onActiveItemChanged(e) {
+        this.$.grid.expandedItems = [e.detail.value];
+      }
+
+      _handleResponse(e) {
+        var me = this;
+        console.log(e);
+        if (e.detail.response.success) {
+          me.data = e.detail.response.payload;
+        } else {
+          var dialog = Polymer.dom(me.root).querySelector('#error-dialog');
+          var errorMsg = Polymer.dom(me.root).querySelector('#error-msg');
+          errorMsg.innerHTML = e.detail.response.error;
+          dialog.open();
+
+        }
+
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        var me = this;
+
+        me.addEventListener('wt-srch-bar-changed', function(e,a,b,c){
+          console.log(e,a,b,c);
+
+          // Re-read from database passing the formData.
+        });
+
+        me.addEventListener('main-srch-field-changed', function(e,a,b,c){
+
+          // local filtering as they type in text search field
+          var grid = Polymer.dom(me.root).querySelector('#grid');
+          grid.items = me.data.filter(function(data){
+            if (((data.name.toString().toLowerCase()).indexOf(e.detail.mainSrchField.toLowerCase()) !== -1) ||
+               ((data.name.toString().toLowerCase()).indexOf(e.detail.mainSrchField.toLowerCase()) !== -1)) {
+              return 1
+            } else {
+              return 0
+            }
+          })
+        });
+        
+
+      }
+
+    }
+
+    window.customElements.define(MyView1.is, MyView1);
+  </script>
+</dom-module>
+

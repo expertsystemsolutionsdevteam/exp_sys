@@ -1,0 +1,698 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../bower_components/paper-dialog-lite/paper-dialog-lite.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-input/paper-textarea.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/iron-form/iron-form.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+
+
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-view3">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+        padding: 10px;
+      }
+
+      .submit-button {
+        margin-top: 10px;
+        background-color: green;
+        color: white;
+        float: right;
+      }
+
+      .clearfix:after {
+        visibility: hidden;
+        display: block;
+        font-size: 0;
+        content: " ";
+        clear: both;
+        height: 0;
+      }
+      * html .clearfix             { zoom: 1; } /* IE6 */
+      *:first-child+html .clearfix { zoom: 1; } /* IE7 */
+
+      paper-dialog#error-dialog {
+        border: 2px solid;
+        border-color: red;
+        background-color: white;
+        color: black;
+      }
+
+      paper-dialog#error-dialog {
+        width: 300px;
+        overflow: auto;
+      }
+
+  paper-dialog-lite{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+    background: white;
+    @apply --layout-horizontal;
+    @apply --layout-center-center;
+    color: #2196F3;
+    box-shadow: 0 12px 16px 1px rgba(0, 0, 0, 0.14),
+    0 4px 22px 3px rgba(0, 0, 0, 0.12),
+    0 6px 7px -4px rgba(0, 0, 0, 0.4);
+  
+    font-size: 18px;
+    text-align: center;
+  }
+
+    </style>
+
+    <iron-ajax
+      id="add-ajax"
+      handle-as="json" 
+      url="/src/data/addEdit.php"
+      on-response="_handleAddResponse"
+      debounce-duration="300">
+    </iron-ajax>
+
+
+    <app-route
+      id="app-route"
+      route="{{route}}"
+      pattern="/:id"
+      data="{{routeData}}"></app-route>
+
+
+    <iron-ajax auto 
+      handle-as="json" 
+      url="/API/api.php/v1/key=TESTKEY/get/tree=3/node=20"
+      on-response="_loadExpertSystem"></iron-ajax>
+
+
+    <iron-ajax
+      id="add-node"
+      handle-as="json" 
+      url="/API/api.php/v1/key=TESTKEY/addnode/tree={{treeId}}/tonode={{nodeId}}"
+      on-response="_addNode"></iron-ajax>
+
+    <iron-ajax
+      id="delete-node"
+      handle-as="json" 
+      url="/API/api.php/v1/key=TESTKEY/delnode/tree={{treeId}}/node={{nodeId}}"
+      on-response="_deleteNode"></iron-ajax>
+
+    <iron-ajax
+      id="edit-node-name"
+      handle-as="json" 
+      url="/API/api.php/v1/key=TESTKEY/editnode/tree={{treeId}}/node={{nodeId}}/name={{nodeName}}"></iron-ajax>
+
+
+    <div class="card">
+      <iron-form id="iron-form">
+
+        <paper-input id="name" required label="Enter Name">
+        </paper-input>
+
+        <div class="clearfix" style="width:100%; white-space:nowrap;">
+<!--           <span style="display: inline-block; vertical-align: top; width:105px">
+            <div id="myPaletteDiv" style="border: solid 1px black; height: 620px"></div>
+          </span> -->
+
+ 
+
+          <div id="myOverviewDiv" style="position: absolute; border: solid 1px blue; width: 100px; height: 90px; left: 50px; background-color: aliceblue; z-index: 1000;">
+          </div> 
+          <div id="sample">
+            <span style="position: relative; display: inline-block; vertical-align: top; width:100%">
+              <div id="myDiagramDiv" style="border: solid 1px black; height: 520px"></div>
+            </span>
+          </div>
+        <div>    
+
+    </iron-form>
+
+    <paper-dialog id="error-dialog" with-backdrop>
+      <h2>Error</h2>
+      <p id="error-msg"></p>
+    </paper-dialog>
+  </template>
+
+  <script>
+
+    //document.elementsFromPoint = Polymer.Gestures.deepTargetFind;
+
+    document.elementsFromPoint = myElementsFromPoint;
+
+
+    function myElementsFromPoint(x, y) {
+      var ret = Polymer.Gestures.deepTargetFind(x, y);
+      return ret;
+    }
+
+    class MyView3 extends Polymer.Element {
+      static get is() { return 'my-view3'; }
+      constructor() {
+        super();
+        console.log("constructor...");
+      }
+
+      _profileUrlForUser(id) {
+        var loadAjax = Polymer.dom(this.root).querySelector('#load-ajax');
+        var url = "";
+        if (typeof id !== 'undefined') {
+          var url = "/src/data/getDecisionTrees.php?id="+id;
+          loadAjax.auto = true;
+        } else {
+          loadAjax.auto = false;
+        }
+        return url;
+      }
+
+      _loadExpertSystem(e,a,b) {
+        var me = this;
+        console.log(e);
+        if (e.detail.response.success) {
+          console.log(e.detail.response.payload);
+          var $ = go.GraphObject.make;
+
+          me.data = e.detail.response.payload;
+          me.data.nodeDataArray.push({ "key":-2, "category": "Recycle" });
+          me.myDiagram.model = go.Model.fromJson(me.data);
+
+          me.myDiagram.layoutDiagram(true);
+          var myOverviewDiv = Polymer.dom(me.root).querySelector('#myOverviewDiv');
+          // Overview
+          var myOverview =
+            $(go.Overview, myOverviewDiv,  // the HTML DIV element for the Overview
+              { observed: me.myDiagram, contentAlignment: go.Spot.Center });   
+        } else {
+          var dialog = Polymer.dom(me.root).querySelector('#error-dialog');
+          var errorMsg = Polymer.dom(me.root).querySelector('#error-msg');
+          errorMsg.innerHTML = e.detail.response.error;
+          dialog.open();
+
+        }
+      }
+
+      _addNode(e) {
+        var me = this;
+        if (e.detail.response.success == true) {
+          var node_id = e.detail.response.payload.returnInfo['node_id'];
+          me.diagram.startTransaction("Add State");
+          // get the node data for which the user clicked the button
+          var fromData = me.fromNode.data;
+          // create a new "State" data object, positioned off to the right of the fromNode
+          var p = me.fromNode.location.copy();
+          p.x += me.diagram.toolManager.draggingTool.gridSnapCellSize.width;
+          var toData = {
+            text: "new",
+            node_id: node_id,
+            exp_sys_id: me.treeId,
+            loc: go.Point.stringify(p)
+          };
+          // add the new node data to the model
+          var model = me.diagram.model;
+          model.addNodeData(toData);
+          // create a link data from the old node data to the new node data
+          var linkdata = {
+            from: model.getKeyForNodeData(fromData),
+            to: model.getKeyForNodeData(toData)
+          };
+          // and add the link data to the model
+          model.addLinkData(linkdata);
+          // select the new Node
+          var newnode = me.diagram.findNodeForData(toData);
+          me.diagram.select(newnode);
+          // snap the new node to a valid location
+          newnode.location = me.diagram.toolManager.draggingTool.computeMove(newnode, p);
+          // then account for any overlap
+          me.shiftNodesToEmptySpaces();
+          me.diagram.commitTransaction("Add State");
+        } else {
+          var dialog = Polymer.dom(me.root).querySelector('#error-dialog');
+          var errorMsg = Polymer.dom(me.root).querySelector('#error-msg');
+          errorMsg.innerHTML = e.detail.response.error;
+          dialog.open();
+        }
+        
+      }
+
+      _deleteNode(e) {
+        var me = this;
+        if (e.detail.response.success == true) {
+          me.myDiagram.commandHandler.deleteSelection(); 
+        } else {
+          var dialog = Polymer.dom(me.root).querySelector('#error-dialog');
+          var errorMsg = Polymer.dom(me.root).querySelector('#error-msg');
+          errorMsg.innerHTML = e.detail.response.error;
+          dialog.open();
+        }
+        
+      }
+
+      _editNodeName(e) {
+        var me = this;
+        if (e.detail.response.success == true) {
+          // All is well with the world!
+        } else {
+          var dialog = Polymer.dom(me.root).querySelector('#error-dialog');
+          var errorMsg = Polymer.dom(me.root).querySelector('#error-msg');
+          errorMsg.innerHTML = e.detail.response.error;
+          dialog.open();
+        }
+        
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        var me = this;
+
+        var myDiagram;
+        var myPalette;
+
+        var myDiagramDiv = Polymer.dom(me.root).querySelector('#myDiagramDiv');
+        var $ = go.GraphObject.make;  // for conciseness in defining templates
+
+
+        me.myDiagram = myDiagram =
+        $(go.Diagram, myDiagramDiv,
+          {
+            allowCopy: false,
+            initialContentAlignment: go.Spot.Center,
+            layout:
+              $(go.LayeredDigraphLayout,
+                {
+                  setsPortSpots: false,  // Links already know their fromSpot and toSpot
+                  columnSpacing: 5,
+                  isInitial: false,
+                  isOngoing: false
+                }),
+            validCycle: go.Diagram.CycleNotDirected,
+            "undoManager.isEnabled": true
+          });
+
+      // when the document is modified, add a "*" to the title and enable the "Save" button
+      myDiagram.addDiagramListener("Modified", function(e) {
+        //var button = document.getElementById("SaveButton");
+        //if (button) button.disabled = !myDiagram.isModified;
+        var idx = document.title.indexOf("*");
+        if (myDiagram.isModified) {
+          if (idx < 0) document.title += "*";
+        } else {
+          if (idx >= 0) document.title = document.title.substr(0, idx);
+        }
+      });
+
+      var graygrad = $(go.Brush, "Linear",
+                       { 0: "white", 0.1: "whitesmoke", 0.9: "whitesmoke", 1: "lightgray" });
+
+      myDiagram.nodeTemplate =  // the default node template
+        $(go.Node, "Spot",
+          { selectionAdorned: false, textEditable: true, locationObjectName: "BODY" },
+          new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+          // the main body consists of a Rectangle surrounding the text
+          $(go.Panel, "Auto",
+            { name: "BODY" },
+            $(go.Shape, "Rectangle",
+              { fill: graygrad, stroke: "gray", minSize: new go.Size(120, 21) },
+              new go.Binding("fill", "isSelected", function(s) { return s ? "dodgerblue" : graygrad; }).ofObject()),
+            $(go.TextBlock,
+              { stroke: "black", font: "12px sans-serif", editable: true,
+                margin: new go.Margin(3, 3+11, 3, 3+4), alignment: go.Spot.Left },
+              new go.Binding("text").makeTwoWay())
+          ),
+          // output port
+          $(go.Panel, "Auto",
+            { alignment: go.Spot.Right, portId: "from", fromLinkable: true, cursor: "pointer", click: addNodeAndLink },
+            $(go.Shape, "Circle",
+              { width: 22, height: 22, fill: "white", stroke: "dodgerblue", strokeWidth: 3 }),
+            $(go.Shape, "PlusLine",
+              { width: 11, height: 11, fill: null, stroke: "dodgerblue", strokeWidth: 3 })
+          ),
+          // input port
+          $(go.Panel, "Auto",
+            { alignment: go.Spot.Left, portId: "to", toLinkable: true },
+            $(go.Shape, "Circle",
+              { width: 8, height: 8, fill: "white", stroke: "gray" }),
+            $(go.Shape, "Circle",
+              { width: 4, height: 4, fill: "dodgerblue", stroke: null })
+          )
+        );
+
+      myDiagram.nodeTemplate.contextMenu =
+        $(go.Adornment, "Vertical",
+          $("ContextMenuButton",
+            $(go.TextBlock, "Rename"),
+            { click: function(e, obj) { e.diagram.commandHandler.editTextBlock(); } },
+            new go.Binding("visible", "", function(o) { return o.diagram && o.diagram.commandHandler.canEditTextBlock(); }).ofObject()),
+          // add one for Editing...
+          $("ContextMenuButton",
+            $(go.TextBlock, "Delete"),
+            { click:  function(e, obj) { 
+                          myDiagram.selection.each(function(node) {
+                            me.treeId = node.Pd['exp_sys_id'];
+                            me.nodeId = node.Pd['node_id'];
+                            var delNodeAjax = Polymer.dom(me.root).querySelector('#delete-node');
+                            delNodeAjax.generateRequest();
+                          });
+                      } 
+            },
+            new go.Binding("visible", "", function(o) { return o.diagram && o.diagram.commandHandler.canDeleteSelection(); }).ofObject())
+        );
+
+      myDiagram.nodeTemplateMap.add("Loading",
+        $(go.Node, "Spot",
+          { selectionAdorned: false, textEditable: true, locationObjectName: "BODY" },
+          new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+          // the main body consists of a Rectangle surrounding the text
+          $(go.Panel, "Auto",
+            { name: "BODY" },
+            $(go.Shape, "Rectangle",
+              { fill: graygrad, stroke: "gray", minSize: new go.Size(120, 21) },
+              new go.Binding("fill", "isSelected", function(s) { return s ? "dodgerblue" : graygrad; }).ofObject()),
+            $(go.TextBlock,
+              { stroke: "black", font: "12px sans-serif", editable: true,
+                margin: new go.Margin(3, 3+11, 3, 3+4), alignment: go.Spot.Left },
+              new go.Binding("text", "text"))
+          ),
+          // output port
+          $(go.Panel, "Auto",
+            { alignment: go.Spot.Right, portId: "from", fromLinkable: true, click: addNodeAndLink },
+            $(go.Shape, "Circle",
+              { width: 22, height: 22, fill: "white", stroke: "dodgerblue", strokeWidth: 3 }),
+            $(go.Shape, "PlusLine",
+              { width: 11, height: 11, fill: null, stroke: "dodgerblue", strokeWidth: 3 })
+          )
+        ));
+
+      myDiagram.nodeTemplateMap.add("End",
+        $(go.Node, "Spot",
+          { selectionAdorned: false, textEditable: true, locationObjectName: "BODY" },
+          new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+          // the main body consists of a Rectangle surrounding the text
+          $(go.Panel, "Auto",
+            { name: "BODY" },
+            $(go.Shape, "Rectangle",
+              { fill: graygrad, stroke: "gray", minSize: new go.Size(120, 21) },
+              new go.Binding("fill", "isSelected", function(s) { return s ? "dodgerblue" : graygrad; }).ofObject()),
+            $(go.TextBlock,
+              { stroke: "black", font: "12px sans-serif", editable: true,
+                margin: new go.Margin(3, 3 + 11, 3, 3 + 4), alignment: go.Spot.Left },
+              new go.Binding("text", "text"))
+          ),
+          // input port
+          $(go.Panel, "Auto",
+            { alignment: go.Spot.Left, portId: "to", toLinkable: true },
+            $(go.Shape, "Circle",
+              { width: 8, height: 8, fill: "white", stroke: "gray" }),
+            $(go.Shape, "Circle",
+              { width: 4, height: 4, fill: "dodgerblue", stroke: null })
+          )
+        ));
+
+
+      // dropping a node on this special node will cause the selection to be deleted;
+      // linking or relinking to this special node will cause the link to be deleted
+      myDiagram.nodeTemplateMap.add("Recycle",
+        $(go.Node, "Auto",
+          { portId: "to", toLinkable: true, deletable: false,
+            layerName: "Background", locationSpot: go.Spot.Center },
+          new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+          { dragComputation: function(node, pt, gridpt) { return pt; } },
+          { mouseDrop: function(e, obj) { 
+                          myDiagram.selection.each(function(node) {
+                            me.treeId = node.Pd['exp_sys_id'];
+                            me.nodeId = node.Pd['node_id'];
+                            var delNodeAjax = Polymer.dom(me.root).querySelector('#delete-node');
+                            delNodeAjax.generateRequest();
+                          });
+                          //console.log("DEL",e,obj, myDiagram.selection);
+                          
+                        } 
+          },
+          $(go.Shape,
+            { fill: "lightgray", stroke: "gray" }),
+          $(go.TextBlock, "Drop Here\nTo Delete",
+            { margin: 5, textAlign: "center" })
+        ));
+
+      // this is a click event handler that adds a node and a link to the diagram,
+      // connecting with the node on which the click occurred
+      function addNodeAndLink(e, obj) {
+        var fromNode = me.fromNode = obj.part;
+        var diagriam = me.diagram = fromNode.diagram;
+        me.treeId = fromNode.Pd['exp_sys_id'];
+        me.nodeId = fromNode.Pd['node_id'];
+        var addNodeAjax = Polymer.dom(me.root).querySelector('#add-node');
+        addNodeAjax.generateRequest();
+      }
+
+      // Highlight ports when they are targets for linking or relinking.
+      var OldTarget = null;  // remember the last highlit port
+      function highlight(port) {
+        if (OldTarget !== port) {
+          lowlight();  // remove highlight from any old port
+          OldTarget = port;
+          port.scale = 1.3;  // highlight by enlarging
+        }
+      }
+      function lowlight() {  // remove any highlight
+        if (OldTarget) {
+          OldTarget.scale = 1.0;
+          OldTarget = null;
+        }
+      }
+
+      // Connecting a link with the Recycle node removes the link
+      myDiagram.addDiagramListener("LinkDrawn", function(e) {
+        var link = e.subject;
+        if (link.toNode.category === "Recycle") myDiagram.remove(link);
+        lowlight();
+      });
+      myDiagram.addDiagramListener("LinkRelinked", function(e) {
+        var link = e.subject;
+        if (link.toNode.category === "Recycle") myDiagram.remove(link);
+        lowlight();
+      });
+
+      myDiagram.linkTemplate =
+        $(go.Link,
+          { selectionAdorned: false, fromPortId: "from", toPortId: "to", relinkableTo: true },
+          $(go.Shape,
+            { stroke: "gray", strokeWidth: 2 },
+            { mouseEnter: function(e, obj) { obj.strokeWidth = 5; obj.stroke = "dodgerblue"; },
+              mouseLeave: function(e, obj) { obj.strokeWidth = 2; obj.stroke = "gray"; } })
+        );
+
+      function commonLinkingToolInit(tool) {
+        // the temporary link drawn during a link drawing operation (LinkingTool) is thick and blue
+        tool.temporaryLink =
+            $(go.Link, { layerName: "Tool" },
+              $(go.Shape, { stroke: "dodgerblue", strokeWidth: 5 }));
+
+        // change the standard proposed ports feedback from blue rectangles to transparent circles
+        tool.temporaryFromPort.figure = "Circle";
+        tool.temporaryFromPort.stroke = null;
+        tool.temporaryFromPort.strokeWidth = 0;
+        tool.temporaryToPort.figure = "Circle";
+        tool.temporaryToPort.stroke = null;
+        tool.temporaryToPort.strokeWidth = 0;
+
+        // provide customized visual feedback as ports are targeted or not
+        tool.portTargeted = function(realnode, realport, tempnode, tempport, toend) {
+          if (realport === null) {  // no valid port nearby
+            lowlight();
+          } else if (toend) {
+            highlight(realport);
+          }
+        };
+      }
+
+      var etool = myDiagram.toolManager.textEditingTool;
+      etool.isValidText = function(textBlock, oldValue, newValue) {
+        console.log("ACCEPT TEXT",textBlock, oldValue, newValue);
+
+        me.treeId = textBlock.part.Pd['exp_sys_id'];
+        me.nodeId = textBlock.part.Pd['node_id'];
+        me.nodeName = newValue;
+        var editNodeNameAjax = Polymer.dom(me.root).querySelector('#edit-node-name');
+        editNodeNameAjax.generateRequest(function(e) {
+          if (!e.detail.response.success) {
+            var dialog = Polymer.dom(me.root).querySelector('#error-dialog');
+            var errorMsg = Polymer.dom(me.root).querySelector('#error-msg');
+            errorMsg.innerHTML = e.detail.response.error;
+            dialog.open();
+          }
+        });
+        return true;
+      }
+
+      var ltool = myDiagram.toolManager.linkingTool;
+      commonLinkingToolInit(ltool);
+      // do not allow links to be drawn starting at the "to" port
+      ltool.direction = go.LinkingTool.ForwardsOnly;
+
+      var rtool = myDiagram.toolManager.relinkingTool;
+      commonLinkingToolInit(rtool);
+      // change the standard relink handle to be a shape that takes the shape of the link
+      rtool.toHandleArchetype =
+        $(go.Shape,
+          { isPanelMain: true, fill: null, stroke: "dodgerblue", strokeWidth: 5 });
+
+      // use a special DraggingTool to cause the dragging of a Link to start relinking it
+      ////myDiagram.toolManager.draggingTool = new DragLinkingTool();
+
+      me.shiftNodesToEmptySpaces = function shiftNodesToEmptySpaces() {
+        myDiagram.selection.each(function(node) {
+          if (!(node instanceof go.Node)) return;
+          // look for Parts overlapping the node
+
+          //node.position = new go.Point(100, 100);
+
+          myDiagram.layoutDiagram(true);
+
+          //node.position = new go.Point(node.actualBounds.x, exist.actualBounds.bottom+10);
+          // while (true) {
+          //   var exist = myDiagram.findObjectsIn(node.actualBounds,
+          //                                       // only consider Parts
+          //                                       function(obj) { return obj.part; },
+          //                                       // ignore Links and the dropped node itself
+          //                                       function(part) { return part instanceof go.Node && part !== node; },
+          //                                       // check for any overlap, not complete containment
+          //                                       true).first();
+          //   if (exist === null) break;
+          //   // try shifting down beyond the existing node to see if there's empty space
+          //   node.position = new go.Point(node.actualBounds.x, exist.actualBounds.bottom+10);
+          // }
+        });
+      }
+
+      // detect when dropped onto an occupied cell
+      myDiagram.addDiagramListener("SelectionMoved", me.shiftNodesToEmptySpaces);
+
+
+
+      // prevent nodes from being dragged to the left of where the layout placed them
+      myDiagram.addDiagramListener("LayoutCompleted", function(e) {
+        myDiagram.nodes.each(function(node) {
+          if (node.category === "Recycle") return;
+          node.minLocation = new go.Point(node.location.x, -Infinity);
+        });
+      });
+
+      var json = { "class": "go.GraphLinksModel",
+  "nodeDataArray": [
+    { "key":1, "text":"Loading Screen", "category":"Loading" },
+    { "key":2, "text":"Beginning" },
+    { "key":3, "text":"Segment 1" },
+    { "key":4, "text":"Segment 2" },
+    { "key":5, "text":"Segment 3"},
+    { "key":6, "text":"End Screen", "category":"End" },
+    { "key":-2, "category": "Recycle" }
+  ],
+  "linkDataArray": [
+    { "from":1, "to":2 },
+    { "from":2, "to":3 },
+    { "from":2, "to":5 },
+    { "from":3, "to":4 },
+    { "from":4, "to":"6" },
+    { "from":6, "to": "null"}
+  ]
+};
+
+    // Define a custom tool that changes a drag operation on a Link to a relinking operation,
+    // but that operates like a normal DraggingTool otherwise.
+    function DragLinkingTool() {
+      go.DraggingTool.call(this);
+      this.isGridSnapEnabled = true;
+      this.isGridSnapRealtime = false;
+      this.gridSnapCellSize = new go.Size(182, 1);
+      this.gridSnapOrigin = new go.Point(5.5, 0);
+    }
+    go.Diagram.inherit(DragLinkingTool, go.DraggingTool);
+
+
+    // me.myDiagram.model = go.Model.fromJson(json);
+
+    // me.myDiagram.layoutDiagram(true);
+    // var myOverviewDiv = Polymer.dom(me.root).querySelector('#myOverviewDiv');
+
+    // var myOverview =
+    //         $(go.Overview, myOverviewDiv,  // the HTML DIV element for the Overview
+    //           { observed: me.myDiagram, contentAlignment: go.Spot.Center });  
+
+
+      //load();  // load initial diagram from the mySavedModel textarea
+      //layout();
+    }
+
+    // function save() {
+    //   document.getElementById("mySavedModel").value = myDiagram.model.toJson();
+    //   myDiagram.isModified = false;
+    // }
+    // function load() {
+    //   myDiagram.model = go.Model.fromJson(document.getElementById("mySavedModel").value);
+    // }
+
+    // function layout() {
+    //   myDiagram.layoutDiagram(true);
+    // }
+
+
+    // Define a custom tool that changes a drag operation on a Link to a relinking operation,
+    // but that operates like a normal DraggingTool otherwise.
+    // function DragLinkingTool() {
+    //   go.DraggingTool.call(this);
+    //   this.isGridSnapEnabled = true;
+    //   this.isGridSnapRealtime = false;
+    //   this.gridSnapCellSize = new go.Size(182, 1);
+    //   this.gridSnapOrigin = new go.Point(5.5, 0);
+    // }
+    // go.Diagram.inherit(DragLinkingTool, go.DraggingTool);
+
+    // // Handle dragging a link specially -- by starting the RelinkingTool on that Link
+    // /** @override */
+    // DragLinkingTool.prototype.doActivate = function() {
+    //   var diagram = this.diagram;
+    //   if (diagram === null) return;
+    //   this.standardMouseSelect();
+    //   var main = this.currentPart;  // this is set by the standardMouseSelect
+    //   if (main instanceof go.Link) { // maybe start relinking instead of dragging
+    //     var relinkingtool = diagram.toolManager.relinkingTool;
+    //     // tell the RelinkingTool to work on this Link, not what is under the mouse
+    //     relinkingtool.originalLink = main;
+    //     // start the RelinkingTool
+    //     diagram.currentTool = relinkingtool;
+    //     // can activate it right now, because it already has the originalLink to reconnect
+    //     relinkingtool.doActivate();
+    //     relinkingtool.doMouseMove();
+    //   } else {
+    //     go.DraggingTool.prototype.doActivate.call(this);
+    //   }
+    // }
+
+}
+
+
+
+    window.customElements.define(MyView3.is, MyView3);
+  </script>
+</dom-module>
+

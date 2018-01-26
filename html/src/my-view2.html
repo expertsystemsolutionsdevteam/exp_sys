@@ -1,0 +1,579 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../bower_components/paper-dialog-lite/paper-dialog-lite.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-input/paper-textarea.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/iron-form/iron-form.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../bower_components/paper-tabs/paper-tabs.html">
+<link rel="import" href="../bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+
+
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-view2">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+        padding: 10px;
+      }
+
+      .submit-button {
+        margin-top: 10px;
+        background-color: green;
+        color: white;
+        float: right;
+      }
+
+      .clearfix:after {
+        visibility: hidden;
+        display: block;
+        font-size: 0;
+        content: " ";
+        clear: both;
+        height: 0;
+      }
+      * html .clearfix             { zoom: 1; } /* IE6 */
+      *:first-child+html .clearfix { zoom: 1; } /* IE7 */
+
+   
+  paper-dialog-lite{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+    background: white;
+    @apply --layout-horizontal;
+    @apply --layout-center-center;
+    color: #2196F3;
+    box-shadow: 0 12px 16px 1px rgba(0, 0, 0, 0.14),
+    0 4px 22px 3px rgba(0, 0, 0, 0.12),
+    0 6px 7px -4px rgba(0, 0, 0, 0.4);
+  
+    font-size: 18px;
+    text-align: center;
+  }
+
+    </style>
+
+    <iron-ajax
+      id="add-ajax"
+      handle-as="json" 
+      url="/src/data/addEdit.php"
+      on-response="_handleAddResponse"
+      debounce-duration="300">
+    </iron-ajax>
+
+    <app-route
+      id="app-route"
+      route="{{route}}"
+      pattern="/:id"
+      data="{{routeData}}"></app-route>
+
+    <iron-ajax id="load-ajax"
+        on-response="_loadExpertSystem"></iron-ajax>
+
+    <div class="card">
+      <iron-form id="iron-form">
+
+        <paper-input id="name" required label="Enter Name">
+        </paper-input>
+
+        <div class="clearfix" style="width:100%; white-space:nowrap;">
+<!--           <span style="display: inline-block; vertical-align: top; width:105px">
+            <div id="myPaletteDiv" style="border: solid 1px black; height: 620px"></div>
+          </span> -->
+
+ 
+
+          <div id="myOverviewDiv" style="position: absolute; border: solid 1px blue; width: 100px; height: 90px; left: 50px; background-color: aliceblue; z-index: 1000;">
+          </div> 
+          <div id="sample">
+            <span style="position: relative; display: inline-block; vertical-align: top; width:100%">
+              <div id="myDiagramDiv" style="border: solid 1px black; height: 520px"></div>
+            </span>
+          </div>
+          <paper-button id="submit-button" raised class="submit-button">Save</paper-button>
+        <div>    
+
+    </iron-form>
+
+  </template>
+
+  <script>
+
+    //document.elementsFromPoint = Polymer.Gestures.deepTargetFind;
+
+    document.elementsFromPoint = myElementsFromPoint;
+
+
+    function myElementsFromPoint(x, y) {
+      var ret = Polymer.Gestures.deepTargetFind(x, y);
+      return ret;
+    }
+
+    class MyView2 extends Polymer.Element {
+      static get is() { return 'my-view2'; }
+      constructor() {
+        super();
+        console.log("constructor...");
+      }
+
+      _profileUrlForUser(id) {
+        var loadAjax = Polymer.dom(this.root).querySelector('#load-ajax');
+        var url = "";
+        if (typeof id !== 'undefined') {
+          var url = "/src/data/getDecisionTrees.php?id="+id;
+          loadAjax.auto = true;
+        } else {
+          loadAjax.auto = false;
+        }
+        return url;
+      }
+
+      _loadExpertSystem(e,a,b) {
+        console.log(e,a,b)
+      }
+
+     
+
+      connectedCallback() {
+        super.connectedCallback();
+        var me = this;
+
+        var myDiagram;
+        var myPalette;
+
+        // var loadAjax = Polymer.dom(me.root).querySelector('#load-ajax');
+        // var appRoute = Polymer.dom(me.root).querySelector('#app-route');
+        // console.log(this.routeData;
+        
+        function TopRotatingTool() {
+          go.RotatingTool.call(this);
+        }
+        go.Diagram.inherit(TopRotatingTool, go.RotatingTool);
+
+        /** @override */
+        TopRotatingTool.prototype.updateAdornments = function(part) {
+          go.RotatingTool.prototype.updateAdornments.call(this, part);
+          var adornment = part.findAdornment("Rotating");
+          if (adornment !== null) {
+            adornment.location = part.rotateObject.getDocumentPoint(new go.Spot(0.5, 0, 0, -30));  // above middle top
+          }
+        };
+
+        /** @override */
+        TopRotatingTool.prototype.rotate = function(newangle) {
+          go.RotatingTool.prototype.rotate.call(this, newangle + 90);
+        };
+        // end of TopRotatingTool class
+
+
+        // Show the diagram's model in JSON format that the user may edit
+        function save() {
+          saveDiagramProperties();  // do this first, before writing to JSON
+          //document.getElementById("mySavedModel").value = myDiagram.model.toJson();
+          myDiagram.isModified = false;
+        }
+        function load() {
+          //myDiagram.model = go.Model.fromJson(document.getElementById("mySavedModel").value);
+          //loadDiagramProperties();  // do this after the Model.modelData has been brought into memory
+        }
+
+        function saveDiagramProperties() {
+          myDiagram.model.modelData.position = go.Point.stringify(myDiagram.position);
+        }
+        function loadDiagramProperties(e) {
+          // set Diagram.initialPosition, not Diagram.position, to handle initialization side-effects
+          var pos = myDiagram.model.modelData.position;
+          if (pos) myDiagram.initialPosition = go.Point.parse(pos);
+        }
+
+
+
+        var diagramDiv = Polymer.dom(me.root).querySelector('#myDiagramDiv');
+        var $ = go.GraphObject.make;  // for conciseness in defining templates
+
+    myDiagram =
+      $(go.Diagram, diagramDiv,  // must name or refer to the DIV HTML element
+        {
+          grid: $(go.Panel, "Grid",
+                  $(go.Shape, "LineH", { stroke: "lightgray", strokeWidth: 0.5 }),
+                  $(go.Shape, "LineH", { stroke: "gray", strokeWidth: 0.5, interval: 10 }),
+                  $(go.Shape, "LineV", { stroke: "lightgray", strokeWidth: 0.5 }),
+                  $(go.Shape, "LineV", { stroke: "gray", strokeWidth: 0.5, interval: 10 })
+                ),
+          allowDrop: false,  // must be true to accept drops from the Palette
+          "draggingTool.dragsLink": true,
+          "draggingTool.isGridSnapEnabled": true,
+          "linkingTool.isUnconnectedLinkValid": true,
+          "linkingTool.portGravity": 20,
+          "relinkingTool.isUnconnectedLinkValid": true,
+          "relinkingTool.portGravity": 20,
+          "relinkingTool.fromHandleArchetype":
+            $(go.Shape, "Diamond", { segmentIndex: 0, cursor: "pointer", desiredSize: new go.Size(8, 8), fill: "tomato", stroke: "darkred" }),
+          "relinkingTool.toHandleArchetype":
+            $(go.Shape, "Diamond", { segmentIndex: -1, cursor: "pointer", desiredSize: new go.Size(8, 8), fill: "darkred", stroke: "tomato" }),
+          "linkReshapingTool.handleArchetype":
+            $(go.Shape, "Diamond", { desiredSize: new go.Size(7, 7), fill: "lightblue", stroke: "deepskyblue" }),
+          rotatingTool: $(TopRotatingTool),  // defined below
+          "rotatingTool.snapAngleMultiple": 15,
+          "rotatingTool.snapAngleEpsilon": 15,
+          "undoManager.isEnabled": true
+        });
+
+    // when the document is modified, add a "*" to the title and enable the "Save" button
+    myDiagram.addDiagramListener("Modified", function(e) {
+      console.log("Here we are",e);
+      // var button = document.getElementById("SaveButton");
+      // if (button) button.disabled = !myDiagram.isModified;
+      // var idx = document.title.indexOf("*");
+      // if (myDiagram.isModified) {
+      //   if (idx < 0) document.title += "*";
+      // } else {
+      //   if (idx >= 0) document.title = document.title.substr(0, idx);
+      // }
+    });
+
+    // Define a function for creating a "port" that is normally transparent.
+    // The "name" is used as the GraphObject.portId, the "spot" is used to control how links connect
+    // and where the port is positioned on the node, and the boolean "output" and "input" arguments
+    // control whether the user can draw links from or to the port.
+    function makePort(name, spot, output, input) {
+      // the port is basically just a small transparent square
+      return $(go.Shape, "Circle",
+               {
+                  fill: null,  // not seen, by default; set to a translucent gray by showSmallPorts, defined below
+                  stroke: null,
+                  desiredSize: new go.Size(7, 7),
+                  alignment: spot,  // align the port on the main Shape
+                  alignmentFocus: spot,  // just inside the Shape
+                  portId: name,  // declare this object to be a "port"
+                  fromSpot: spot, toSpot: spot,  // declare where links may connect at this port
+                  fromLinkable: output, toLinkable: input,  // declare whether the user may draw links to/from here
+                  cursor: "pointer"  // show a different cursor to indicate potential link point
+               });
+    }
+
+    var nodeSelectionAdornmentTemplate =
+      $(go.Adornment, "Auto",
+        $(go.Shape, { fill: null, stroke: "deepskyblue", strokeWidth: 1.5, strokeDashArray: [4, 2] }),
+        $(go.Placeholder)
+      );
+
+    var nodeResizeAdornmentTemplate =
+      $(go.Adornment, "Spot",
+        { locationSpot: go.Spot.Right },
+        $(go.Placeholder),
+        $(go.Shape, { alignment: go.Spot.TopLeft, cursor: "nw-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" }),
+        $(go.Shape, { alignment: go.Spot.Top, cursor: "n-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" }),
+        $(go.Shape, { alignment: go.Spot.TopRight, cursor: "ne-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" }),
+
+        $(go.Shape, { alignment: go.Spot.Left, cursor: "w-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" }),
+        $(go.Shape, { alignment: go.Spot.Right, cursor: "e-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" }),
+
+        $(go.Shape, { alignment: go.Spot.BottomLeft, cursor: "se-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" }),
+        $(go.Shape, { alignment: go.Spot.Bottom, cursor: "s-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" }),
+        $(go.Shape, { alignment: go.Spot.BottomRight, cursor: "sw-resize", desiredSize: new go.Size(6, 6), fill: "lightblue", stroke: "deepskyblue" })
+      );
+
+    var nodeRotateAdornmentTemplate =
+      $(go.Adornment,
+        { locationSpot: go.Spot.Center, locationObjectName: "CIRCLE" },
+        $(go.Shape, "Circle", { name: "CIRCLE", cursor: "pointer", desiredSize: new go.Size(7, 7), fill: "lightblue", stroke: "deepskyblue" }),
+        $(go.Shape, { geometryString: "M3.5 7 L3.5 30", isGeometryPositioned: true, stroke: "deepskyblue", strokeWidth: 1.5, strokeDashArray: [4, 2] })
+      );
+
+    myDiagram.nodeTemplate =
+      $(go.Node, "Spot",
+        { locationSpot: go.Spot.Center },
+        new go.Binding("location", "loc", go.Point.parse).makeTwoWay(go.Point.stringify),
+        { selectable: true, selectionAdornmentTemplate: nodeSelectionAdornmentTemplate },
+        { resizable: true, resizeObjectName: "PANEL", resizeAdornmentTemplate: nodeResizeAdornmentTemplate },
+        { rotatable: true, rotateAdornmentTemplate: nodeRotateAdornmentTemplate },
+        new go.Binding("angle").makeTwoWay(),
+        // the main object is a Panel that surrounds a TextBlock with a Shape
+        $(go.Panel, "Auto",
+          { name: "PANEL" },
+          new go.Binding("desiredSize", "size", go.Size.parse).makeTwoWay(go.Size.stringify),
+          $(go.Shape, "Rectangle",  // default figure
+            {
+              portId: "", // the default port: if no spot on link data, use closest side
+              fromLinkable: true, toLinkable: true, cursor: "pointer",
+              fill: "white",  // default color
+              strokeWidth: 2
+            },
+            new go.Binding("figure"),
+            new go.Binding("fill")),
+          $(go.TextBlock,
+            {
+              font: "bold 11pt Helvetica, Arial, sans-serif",
+              margin: 8,
+              maxSize: new go.Size(160, NaN),
+              wrap: go.TextBlock.WrapFit,
+              editable: true
+            },
+            new go.Binding("text").makeTwoWay())
+        ),
+        // four small named ports, one on each side:
+        makePort("T", go.Spot.Top, false, true),
+        makePort("L", go.Spot.Left, true, true),
+        makePort("R", go.Spot.Right, true, true),
+        makePort("B", go.Spot.Bottom, true, false),
+        { // handle mouse enter/leave events to show/hide the ports
+          mouseEnter: function(e, node) { showSmallPorts(node, true); },
+          mouseLeave: function(e, node) { showSmallPorts(node, false); }
+        }
+      );
+
+    function showSmallPorts(node, show) {
+      node.ports.each(function(port) {
+        if (port.portId !== "") {  // don't change the default port, which is the big shape
+          port.fill = show ? "rgba(0,0,0,.3)" : null;
+        }
+      });
+    }
+
+    var linkSelectionAdornmentTemplate =
+      $(go.Adornment, "Link",
+        $(go.Shape,
+          // isPanelMain declares that this Shape shares the Link.geometry
+          { isPanelMain: true, fill: null, stroke: "deepskyblue", strokeWidth: 0 })  // use selection object's strokeWidth
+      );
+
+    myDiagram.linkTemplate =
+      $(go.Link,  // the whole link panel
+        { selectable: true, selectionAdornmentTemplate: linkSelectionAdornmentTemplate },
+        { relinkableFrom: true, relinkableTo: true, reshapable: true },
+        {
+          routing: go.Link.AvoidsNodes,
+          curve: go.Link.JumpOver,
+          corner: 5,
+          toShortLength: 4
+        },
+        new go.Binding("points").makeTwoWay(),
+        $(go.Shape,  // the link path shape
+          { isPanelMain: true, strokeWidth: 2 }),
+        $(go.Shape,  // the arrowhead
+          { toArrow: "Standard", stroke: null }),
+        $(go.Panel, "Auto",
+          new go.Binding("visible", "isSelected").ofObject(),
+          $(go.Shape, "RoundedRectangle",  // the link shape
+            { fill: "#F8F8F8", stroke: null }),
+          $(go.TextBlock,
+            {
+              textAlign: "center",
+              font: "10pt helvetica, arial, sans-serif",
+              stroke: "#919191",
+              margin: 2,
+              minSize: new go.Size(10, NaN),
+              editable: true
+            },
+            new go.Binding("text").makeTwoWay())
+        )
+      );
+
+    //load();  // load an initial diagram from some JSON text
+
+
+    var myOverviewDiv = Polymer.dom(me.root).querySelector('#myOverviewDiv');
+    // Overview
+    var myOverview =
+      $(go.Overview, myOverviewDiv,  // the HTML DIV element for the Overview
+        { observed: myDiagram, contentAlignment: go.Spot.Center });   // tell it which Diagram to show and pan
+
+    // var paletteDiv = Polymer.dom(this.root).querySelector('#myPaletteDiv');
+
+    // // initialize the Palette that is on the left side of the page
+    // myPalette =
+    //   $(go.Palette, paletteDiv,  // must name or refer to the DIV HTML element
+    //     {
+    //       maxSelectionCount: 1,
+    //       nodeTemplateMap: myDiagram.nodeTemplateMap,  // share the templates used by myDiagram
+    //       allowDragOut: true,
+    //       linkTemplate: // simplify the link template, just in this Palette
+    //         $(go.Link,
+    //           { // because the GridLayout.alignment is Location and the nodes have locationSpot == Spot.Center,
+    //             // to line up the Link in the same manner we have to pretend the Link has the same location spot
+    //             locationSpot: go.Spot.Center,
+    //             selectionAdornmentTemplate:
+    //               $(go.Adornment, "Link",
+    //                 { locationSpot: go.Spot.Center },
+    //                 $(go.Shape,
+    //                   { isPanelMain: true, fill: null, stroke: "deepskyblue", strokeWidth: 0 }),
+    //                 $(go.Shape,  // the arrowhead
+    //                   { toArrow: "Standard", stroke: null })
+    //               )
+    //           },
+    //           {
+    //             routing: go.Link.AvoidsNodes,
+    //             curve: go.Link.JumpOver,
+    //             corner: 5,
+    //             toShortLength: 4
+    //           },
+    //           new go.Binding("points"),
+    //           $(go.Shape,  // the link path shape
+    //             { isPanelMain: true, strokeWidth: 2 }),
+    //           $(go.Shape,  // the arrowhead
+    //             { toArrow: "Standard", stroke: null })
+    //         ),
+    //       model: new go.GraphLinksModel([  // specify the contents of the Palette
+    //         { text: "Start", figure: "Circle", fill: "#00AD5F" },
+    //         { text: "Step" },
+    //         { text: "DB", figure: "Database", fill: "lightgray" },
+    //         { text: "???", figure: "Diamond", fill: "lightskyblue" },
+    //         { text: "End", figure: "Circle", fill: "#CE0620" },
+    //         { text: "Comment", figure: "RoundedRectangle", fill: "lightyellow" }
+    //       ], [
+    //         // the Palette also has a disconnected Link, which the user can drag-and-drop
+    //         { points: new go.List(go.Point).addAll([new go.Point(0, 0), new go.Point(30, 0), new go.Point(30, 40), new go.Point(60, 40)]) }
+    //       ])
+    //     });
+
+    
+        // also define a context menu for the diagram's background
+  myDiagram.contextMenu =
+    $(go.Adornment, "Vertical",
+
+
+      // no binding, always visible button:
+      $("Button",
+        $(go.Panel, "Auto", { },
+            $(go.Shape, "Circle",{strokeWidth: 1, height: 35, width: 35, fill: 'lightgreen'}),
+            $(go.TextBlock, { stroke: "black", text: "Start", textAlign: "center", font: "7pt sans-serif" }, new go.Binding("text", "a"))
+          ),
+        { click: function(e, obj) {
+          var diagram = e.diagram;
+          diagram.startTransaction('new node');
+          var data = {text: "Start", figure: "Circle", fill: 'lightgreen', category: ""};
+          diagram.model.addNodeData(data);
+          var part = diagram.findPartForData(data);
+          part.location = diagram.toolManager.contextMenuTool.mouseDownPoint;
+          console.log("POINT",diagram.toolManager.contextMenuTool.mouseDownPoint)
+          diagram.commitTransaction('new node');
+        } }),
+
+
+      // no binding, always visible button:
+      $("ContextMenuButton",
+        $(go.Panel, "Auto", { },
+            $(go.Shape, "RoundedRectangle",{strokeWidth: 1, height: 35, width: 50, fill: 'white'}),
+            $(go.TextBlock, { stroke: "black", text: "Step", textAlign: "center", font: "7pt sans-serif" }, new go.Binding("text", "a"))
+          ),
+        { click: function(e, obj) {
+          var diagram = e.diagram;
+          diagram.startTransaction('new node');
+          var data = {text: "Step", figure: "RoundedRectangle", fill: 'white', category: ""};
+          diagram.model.addNodeData(data);
+          var part = diagram.findPartForData(data);
+          part.location = diagram.toolManager.contextMenuTool.mouseDownPoint;
+          console.log("POINT",diagram.toolManager.contextMenuTool.mouseDownPoint)
+          diagram.commitTransaction('new node');
+        } }),
+
+            // no binding, always visible button:
+      $("ContextMenuButton",
+        $(go.Panel, "Auto", { },
+            $(go.Shape, "Diamond",{strokeWidth: 1, height: 35, width: 35, fill: 'lightskyblue'}),
+            $(go.TextBlock, { stroke: "black", text: "???", textAlign: "center", font: "7pt sans-serif" }, new go.Binding("text", "a"))
+          ),
+        //$(go.TextBlock, "???"),
+        { click: function(e, obj) {
+          var diagram = e.diagram;
+          diagram.startTransaction('new node');
+          var data = {text: "? ? ?", figure: "Diamond", fill: 'lightskyblue', category: ""};
+          diagram.model.addNodeData(data);
+          var part = diagram.findPartForData(data);
+          part.location = diagram.toolManager.contextMenuTool.mouseDownPoint;
+          console.log("POINT",diagram.toolManager.contextMenuTool.mouseDownPoint)
+          diagram.commitTransaction('new node');
+        } }),
+
+            // no binding, always visible button:
+      $("ContextMenuButton",
+        //$(go.TextBlock, "Comment"),
+        $(go.Panel, "Auto", {  },
+          $(go.Shape, "RoundedRectangle",{strokeWidth: 1, height: 35, width: 50, fill: 'yellow'}),
+          $(go.TextBlock, { stroke: "black", text: "Comment", textAlign: "center", font: "7pt sans-serif" }, new go.Binding("text", "a"))
+        ),     
+        { click: function(e, obj) {
+          var diagram = e.diagram;
+          diagram.startTransaction('new node');
+          var data = {text: "Comment", figure: "RoundedRectangle", fill: 'yellow', category: ""};
+          diagram.model.addNodeData(data);
+          var part = diagram.findPartForData(data);
+          part.location = diagram.toolManager.contextMenuTool.mouseDownPoint;
+          console.log("POINT",diagram.toolManager.contextMenuTool.mouseDownPoint)
+          diagram.commitTransaction('new node');
+        } }),
+
+      $("ContextMenuButton",
+        //$(go.TextBlock, "Stop"),
+        $(go.Panel, "Auto", { },
+          $(go.Shape, "Circle",{strokeWidth: 2, height: 35, width: 35, fill: 'red'}),
+          $(go.TextBlock, { stroke: "black", text: "Stop", textAlign: "center", font: "7pt sans-serif" }, new go.Binding("text", "a"))
+        ),   
+        { click: function(e, obj) {
+          var diagram = e.diagram;
+          diagram.startTransaction('new node');
+          var data = {text: "Stop", figure: "Circle", fill: 'red', category: ""};
+          diagram.model.addNodeData(data);
+          var part = diagram.findPartForData(data);
+          part.location = diagram.toolManager.contextMenuTool.mouseDownPoint;
+          console.log("POINT",diagram.toolManager.contextMenuTool.mouseDownPoint)
+          diagram.commitTransaction('new node');
+        } })
+    );
+
+    
+    /**
+     * Functions to Submit and Add
+     *
+     */
+    var submitButton = Polymer.dom(me.root).querySelector('#submit-button');
+    submitButton.addEventListener('click',function(e){
+        var form = Polymer.dom(me.root).querySelector('#iron-form');
+        var ajax = Polymer.dom(me.root).querySelector('#add-ajax');
+        console.log(myDiagram.model.toJson());
+          console.log(ajax, form);
+          ajax.generateRequest();
+        
+      });
+
+
+      function _handleAddResponse(e) {
+        console.log("ADD RESPONSE",e);
+      }
+
+      // form.addEventListener('iron-form-submit', function(event) {
+      //   console.log(JSON.stringify(event.detail));
+      // });
+      // myDiagram.model.nodeDataArray = [
+      //   { key: "Alpha", desc: "first letter", loc: "100 0", color: "green" },  // uses default category: ""
+      //   { key: "Beta", desc: "second letter", loc: "200 0", fill: "lightblue", category: "newdiamond" },
+      //   { key: "Gamma", desc: "third letter", loc: "300 0", color: "pink", category: "" }
+      // ];
+
+      }
+
+    }
+
+
+    window.customElements.define(MyView2.is, MyView2);
+  </script>
+</dom-module>
+
